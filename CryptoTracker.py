@@ -1,6 +1,6 @@
-import matplotlib.pyplot as plt
 import yfinance as yf
 import pandas as pd
+import plotly.graph_objects as go
 
 # Function to calculate Fibonacci Retracement levels
 def fibonacci_retracement_levels(price_min, price_max):
@@ -19,9 +19,10 @@ def find_support_resistance(data):
     lows = data['Low'].rolling(window=15).min()
     return highs, lows
 
-# Ask user for the cryptocurrency ticker and the time frame
+# Ask user for the cryptocurrency ticker, time frame, and graph type
 ticker = input("Enter the cryptocurrency ticker (e.g., BTC-USD): ")
 period = input("Enter the time frame (e.g., 1y, 1mo, 5d): ")
+graph_type = input("Enter graph type (line/candlestick): ").lower()
 
 # Download historical data for the specified cryptocurrency
 data = yf.download(ticker, period=period)
@@ -34,20 +35,25 @@ fib_levels = fibonacci_retracement_levels(price_min, price_max)
 # Identify support and resistance levels
 resistance_levels, support_levels = find_support_resistance(data)
 
-# Plot the data along with Fibonacci levels and support/resistance levels
-plt.figure(figsize=(12, 8))
-plt.title(f'Fibonacci Retracement Levels for {ticker}')
-plt.xlabel('Date')
-plt.ylabel('Price in USD')
-plt.plot(data['Close'], label='Close Price', color='blue')
+# Create Plotly figure
+fig = go.Figure()
 
-# Plot Fibonacci levels
+# Add the main plot (line or candlestick)
+if graph_type == 'line':
+    fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Close Price'))
+elif graph_type == 'candlestick':
+    fig.add_trace(go.Candlestick(x=data.index, open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'], name='Candlestick'))
+
+# Add Fibonacci levels
 for level, price in fib_levels.items():
-    plt.axhline(y=price, linestyle='--', label=f'Fib {level} ({price:.2f})')
+    fig.add_hline(y=price, line_dash="dash", annotation_text=f'Fib {level}', annotation_position="bottom right")
 
-# Plot major resistance and support levels
-plt.plot(resistance_levels, label='Resistance', linestyle='-', color='red')
-plt.plot(support_levels, label='Support', linestyle='-', color='green')
+# Add major resistance and support levels
+fig.add_trace(go.Scatter(x=resistance_levels.index, y=resistance_levels, mode='lines', name='Resistance', line=dict(color='red')))
+fig.add_trace(go.Scatter(x=support_levels.index, y=support_levels, mode='lines', name='Support', line=dict(color='green')))
 
-plt.legend()
-plt.show()
+# Update layout
+fig.update_layout(title=f'Fibonacci Retracement Levels for {ticker}', xaxis_title='Date', yaxis_title='Price in USD', legend_title="Legend")
+
+# Show plot
+fig.show()
